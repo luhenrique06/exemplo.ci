@@ -1,0 +1,44 @@
+name: exemploCI
+
+on: ## quando vai rodar o workflow
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: 'build and Push'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: "Setup node"
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - run: npm install
+    - run: npm test
+
+### AULA CD
+    - name: Generate tags # fazer isso depois de testar o latest
+      id: gerate_tag
+      run: |
+        SHA=$(echo $GITHUB_SHA | head -c7)
+        echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+
+    - name: login container regitry ## FINAL DA AULA
+      use: docker/login-action@v3
+      with:
+        username: ${{secrets.DOCKERHUB_USERNAME}}
+        password: ${{secrets.DOCKERHUB_TOKEN}}
+
+    - name: Build docker image #isso deve vir depois das checkagens de seguranca
+      run: docker build -t luherique/exemplo-ci-api:${{steps.gerate_tag.outputs.sha}} .
+
+    - name: Push image
+      run: docker push luherique/exemplo-ci-api:${{steps.gerate_tag.outputs.sha}}
